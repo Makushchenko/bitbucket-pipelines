@@ -1,0 +1,16 @@
+{
+  "name": "example-aws-ecs-deploy",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@bitbucket.org/bitbucketpipelines/example-aws-ecs-deploy.git"
+  },
+  "homepage": "https://bitbucket.org/bitbucketpipelines/example-aws-ecs-deploy#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "family": "httpd-dev-taskdefinition",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "httpd-dev-container",
+      "image": "${IMAGE_NAME}",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 80,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "${AWS_EXECUTION_TASK_ROLE}",
+  "taskRoleArn": "${AWS_TASK_ROLE}"
+}
