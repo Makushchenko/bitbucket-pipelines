@@ -1,0 +1,41 @@
+image: python:3.7.4-alpine3.10
+
+
+pipelines:
+  branches:
+    main:
+      - step:
+          services:
+            - docker
+          caches:
+            - pip
+          script:
+            #aws install
+            - pip3 install awscli
+            - aws configure set aws_access_key_id "${AWS_ACCESS_KEY_ID}"
+            - aws configure set aws_secret_access_key "${AWS_SECRET_ACCESS_KEY}"
+            # aws login
+            - eval $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION} | sed 's;https://;;g')
+            # docker
+            - export BUILD_ID=$BITBUCKET_BUILD_NUMBER
+            - docker build -t ${AWS_REGISTRY_URL}:$BUILD_ID .
+            - docker tag ${AWS_REGISTRY_URL}:$BUILD_ID ${AWS_REGISTRY_URL}:$BUILD_ID
+            - docker push ${AWS_REGISTRY_URL}:$BUILD_ID
+      - step:
+          name: Deploy to ECS
+          script:
+            # Replace the docker image name in the task definition with the newly pushed image.
+            - export IMAGE_NAME="${AWS_REGISTRY_URL}:${BITBUCKET_BUILD_NUMBER}"
+            - echo $IMAGE_NAME
+            - pip3 install envsubst
+            - envsubst < task-definition-template.json > custom-nginx-task.json
+
+            # Update the task definition.
+            - pipe: atlassian/aws-ecs-deploy:1.0.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                CLUSTER_NAME: 'devops_nginx_cluster'
+                SERVICE_NAME: 'custom_nginx-ecs-service'
+                TASK_DEFINITION: 'custom-nginx-task.json'

@@ -1,0 +1,168 @@
+image: python:3.7.4-alpine3.10
+
+
+pipelines:
+  branches:
+    '{feature/**,bugfix/dev/*}':
+      - step:
+          image: atlassian/default-image:3
+          name: Merge to dev-master
+          script:            
+            - git remote set-url origin "https://${PIPELINE_MERGER_USERNAME}:${PIPELINE_MERGER_PASSWORD}@bitbucket.org/${BITBUCKET_REPO_OWNER}/${BITBUCKET_REPO_SLUG}"
+            - git fetch
+            - git checkout -b dev-master
+            - git pull -vv origin dev-master
+            - git push -vv origin dev-master   
+    master:
+      - step:
+          services:
+            - docker
+          caches:
+            - pip
+          script:
+            #aws install..
+            - pip3 install awscli
+            - aws configure set aws_access_key_id "${AWS_ACCESS_KEY_ID}"
+            - aws configure set aws_secret_access_key "${AWS_SECRET_ACCESS_KEY}"
+            # aws login
+            - eval $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION} | sed 's;https://;;g')
+            # docker
+            - export BUILD_ID=$BITBUCKET_BUILD_NUMBER
+            - docker build -t ${AWS_REGISTRY_URL}:master-$BUILD_ID .
+            - docker tag ${AWS_REGISTRY_URL}:master-$BUILD_ID ${AWS_REGISTRY_URL}:master-$BUILD_ID
+            - docker push ${AWS_REGISTRY_URL}:master-$BUILD_ID
+      - step:
+          name: Deploy to ECS
+          script:
+            # Replace the docker image name in the task definition with the newly pushed image.
+            - export IMAGE_NAME="${AWS_REGISTRY_URL}:master-${BITBUCKET_BUILD_NUMBER}"
+            - echo $IMAGE_NAME
+            - pip3 install envsubst
+            - envsubst < task-definition-template.json > httpd-master-taskdefinition.json
+
+            # Update the task definition.
+            - pipe: atlassian/aws-ecs-deploy:1.0.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                CLUSTER_NAME: 'httpd-ECS'
+                SERVICE_NAME: 'httpd-master-service'
+                TASK_DEFINITION: 'httpd-master-taskdefinition.json'
+      - step:
+          image: atlassian/default-image:3
+          name: Merge to sandbox-master
+          script:            
+            - git remote set-url origin "https://${PIPELINE_MERGER_USERNAME}:${PIPELINE_MERGER_PASSWORD}@bitbucket.org/${BITBUCKET_REPO_OWNER}/${BITBUCKET_REPO_SLUG}"
+            - git fetch
+            - git checkout -b sandbox-master
+            - git pull -vv origin sandbox-master
+            - git push -vv origin sandbox-master
+    qa-master:
+      - step:
+          services:
+            - docker
+          caches:
+            - pip
+          script:
+            #aws install
+            - pip3 install awscli
+            - aws configure set aws_access_key_id "${AWS_ACCESS_KEY_ID}"
+            - aws configure set aws_secret_access_key "${AWS_SECRET_ACCESS_KEY}"
+            # aws login
+            - eval $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION} | sed 's;https://;;g')
+            # docker
+            - export BUILD_ID=$BITBUCKET_BUILD_NUMBER
+            - docker build -t ${AWS_REGISTRY_URL}:qa-$BUILD_ID .
+            - docker tag ${AWS_REGISTRY_URL}:qa-$BUILD_ID ${AWS_REGISTRY_URL}:qa-$BUILD_ID
+            - docker push ${AWS_REGISTRY_URL}:qa-$BUILD_ID
+      - step:
+          name: Deploy to ECS
+          script:
+            # Replace the docker image name in the task definition with the newly pushed image.
+            - export IMAGE_NAME="${AWS_REGISTRY_URL}:qa-${BITBUCKET_BUILD_NUMBER}"
+            - echo $IMAGE_NAME
+            - pip3 install envsubst
+            - envsubst < task-definition-template.json > httpd-qa-taskdefinition.json
+
+            # Update the task definition.
+            - pipe: atlassian/aws-ecs-deploy:1.0.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                CLUSTER_NAME: 'httpd-ECS'
+                SERVICE_NAME: 'httpd-qa-service'
+                TASK_DEFINITION: 'httpd-qa-taskdefinition.json'
+    dev-master:
+      - step:
+          services:
+            - docker
+          caches:
+            - pip
+          script:
+            #aws install
+            - pip3 install awscli
+            - aws configure set aws_access_key_id "${AWS_ACCESS_KEY_ID}"
+            - aws configure set aws_secret_access_key "${AWS_SECRET_ACCESS_KEY}"
+            # aws login
+            - eval $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION} | sed 's;https://;;g')
+            # docker
+            - export BUILD_ID=$BITBUCKET_BUILD_NUMBER
+            - docker build -t ${AWS_REGISTRY_URL}:dev-$BUILD_ID .
+            - docker tag ${AWS_REGISTRY_URL}:dev-$BUILD_ID ${AWS_REGISTRY_URL}:$BUILD_ID
+            - docker push ${AWS_REGISTRY_URL}:dev-$BUILD_ID
+      - step:
+          name: Deploy to ECS
+          script:
+            # Replace the docker image name in the task definition with the newly pushed image.
+            - export IMAGE_NAME="${AWS_REGISTRY_URL}:dev-${BITBUCKET_BUILD_NUMBER}"
+            - echo $IMAGE_NAME
+            - pip3 install envsubst
+            - envsubst < task-definition-template.json > httpd-dev-taskdefinition.json
+
+            # Update the task definition.
+            - pipe: atlassian/aws-ecs-deploy:1.0.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                CLUSTER_NAME: 'httpd-ECS'
+                SERVICE_NAME: 'httpd-dev-service'
+                TASK_DEFINITION: 'httpd-dev-taskdefinition.json'
+    sandbox-master:
+      - step:
+          services:
+            - docker
+          caches:
+            - pip
+          script:
+            #aws install
+            - pip3 install awscli
+            - aws configure set aws_access_key_id "${AWS_ACCESS_KEY_ID}"
+            - aws configure set aws_secret_access_key "${AWS_SECRET_ACCESS_KEY}"
+            # aws login
+            - eval $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION} | sed 's;https://;;g')
+            # docker
+            - export BUILD_ID=$BITBUCKET_BUILD_NUMBER
+            - docker build -t ${AWS_REGISTRY_URL}:sandbox-$BUILD_ID .
+            - docker tag ${AWS_REGISTRY_URL}:sandbox-$BUILD_ID ${AWS_REGISTRY_URL}:$BUILD_ID
+            - docker push ${AWS_REGISTRY_URL}:sandbox-$BUILD_ID
+      - step:
+          name: Deploy to ECS
+          script:
+            # Replace the docker image name in the task definition with the newly pushed image.
+            - export IMAGE_NAME="${AWS_REGISTRY_URL}:sandbox-${BITBUCKET_BUILD_NUMBER}"
+            - echo $IMAGE_NAME
+            - pip3 install envsubst
+            - envsubst < task-definition-template.json > httpd-sandbox-taskdefinition.json
+
+            # Update the task definition.
+            - pipe: atlassian/aws-ecs-deploy:1.0.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                CLUSTER_NAME: 'httpd-ECS'
+                SERVICE_NAME: 'httpd-sandbox-service'
+                TASK_DEFINITION: 'httpd-sandbox-taskdefinition.json'             

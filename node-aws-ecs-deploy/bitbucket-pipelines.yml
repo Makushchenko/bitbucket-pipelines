@@ -1,0 +1,33 @@
+image:
+  name: atlassian/default-image:2
+
+pipelines:
+  default:
+    - step:
+        name: Build and publish docker image.
+        services:
+          - docker # Enable Docker for your repository
+        script:
+          # Modify the commands below to build your repository.
+          # Set the name of the docker image we will be building.
+          - export IMAGE_NAME="${DOCKERHUB_USERNAME}/${BITBUCKET_REPO_SLUG}:${BITBUCKET_BUILD_NUMBER}"
+          # Build the docker image and push to Dockerhub.
+          - docker build -t "$IMAGE_NAME" .
+          - docker login --username "$DOCKERHUB_USERNAME" --password "$DOCKERHUB_PASSWORD"
+          - docker push "$IMAGE_NAME"
+    - step:
+        name: Deploy to ECS
+        script:
+          # Replace the docker image name in the task definition with the newly pushed image.
+          - export IMAGE_NAME="${DOCKERHUB_USERNAME}/${BITBUCKET_REPO_SLUG}:${BITBUCKET_BUILD_NUMBER}"
+          - envsubst < task-definition-template.json >  task-definition.json
+
+          # Update the task definition.
+          - pipe: atlassian/aws-ecs-deploy:1.0.0
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              CLUSTER_NAME: 'example-ecs-cluster'
+              SERVICE_NAME: 'example-ecs-service'
+              TASK_DEFINITION: 'task-definition.json'
