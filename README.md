@@ -27,13 +27,13 @@ Contains a multi-branch pipeline for building and deploying an Apache HTTP Serve
   Each pipeline step:
   1. Installs AWS CLI and configures credentials.  
   2. Logs in to ECR, builds, tags (`${AWS_REGISTRY_URL}:<branch>-<BUILD_ID>`), and pushes the HTTPD image.  
-  3. Uses the Atlassian `aws-ecs-deploy` pipe to update the ECS service with a rendered task definition. :contentReference[oaicite:0]{index=0}
+  3. Uses the Atlassian `aws-ecs-deploy` pipe to update the ECS service with a rendered task definition.
 
 - **`Dockerfile`**  
-  Bases on `httpd:latest` and exposes port 80. :contentReference[oaicite:1]{index=1}
+  Bases on `httpd:latest` and exposes port 80.
 
 - **`task-definition-template.json`**  
-  An AWS Fargate task definition template. Replace `${IMAGE_NAME}`, `${AWS_EXECUTION_TASK_ROLE}`, and `${AWS_TASK_ROLE}` at deploy time. :contentReference[oaicite:2]{index=2}
+  An AWS Fargate task definition template. Replace `${IMAGE_NAME}`, `${AWS_EXECUTION_TASK_ROLE}`, and `${AWS_TASK_ROLE}` at deploy time.
 
 ---
 
@@ -42,13 +42,13 @@ Contains a multi-branch pipeline for building and deploying an Apache HTTP Serve
 Provides a simple `main`-branch pipeline for an NGINX container:
 
 - **`bitbucket-pipelines.yml`**  
-  For `main` branch: installs AWS CLI, logs in to ECR, builds and pushes the `nginx:latest`-based image, then deploys via the `aws-ecs-deploy` pipe. :contentReference[oaicite:3]{index=3}
+  For `main` branch: installs AWS CLI, logs in to ECR, builds and pushes the `nginx:latest`-based image, then deploys via the `aws-ecs-deploy` pipe.
 
 - **`Dockerfile`**  
-  Builds from `nginx:latest` and exposes port 80. :contentReference[oaicite:4]{index=4}
+  Builds from `nginx:latest` and exposes port 80.
 
 - **`task-definition-template.json`**  
-  Fargate task definition with placeholders for `${IMAGE_NAME}` and execution role ARN. :contentReference[oaicite:5]{index=5}
+  Fargate task definition with placeholders for `${IMAGE_NAME}` and execution role ARN.
 
 ---
 
@@ -60,21 +60,20 @@ Demonstrates a Node.js application pipeline with DockerHub integration:
   Default pipeline:
   1. Builds the Node.js image (`${DOCKERHUB_USERNAME}/${BITBUCKET_REPO_SLUG}:${BUILD_NUMBER}`)  
   2. Logs in to DockerHub and pushes the image  
-  3. Renders and deploys an ECS task via `aws-ecs-deploy` pipe. :contentReference[oaicite:6]{index=6}
+  3. Renders and deploys an ECS task via `aws-ecs-deploy` pipe.
 
 - **`Dockerfile`**  
   - Uses `node:latest`
   - Installs dependencies from `package.json`
   - Copies `src/`
-  - Exposes port 3000 and runs `npm start`. :contentReference[oaicite:7]{index=7}
+  - Exposes port 3000 and runs `npm start`.
 
 - **`package.json`** & **`src/app.js`**  
-  A simple Express.js “Hello World!” server listening on port 3000. :contentReference[oaicite:8]{index=8}
+  A simple Express.js “Hello World!” server listening on port 3000.
 
 - **`task-definition-template.json`**  
-  Fargate task definition for the Node.js app, with `${IMAGE_NAME}` placeholder. :contentReference[oaicite:9]{index=9}
+  Fargate task definition for the Node.js app, with `${IMAGE_NAME}`
 
 ---
 
 With this guide in place, anyone browsing the repo can quickly see what each pipeline does, which files live in each directory, and how to configure Bitbucket and AWS/DockerHub to get started.
-::contentReference[oaicite:10]{index=10}
